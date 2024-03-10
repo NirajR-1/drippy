@@ -6,20 +6,20 @@ import { useEffect, useState } from "react";
 
 export default function AddToCart({ item }: { item: OrderItem }) {
   const router = useRouter();
-  const { items, increase} = useCartService();
+  const { items, increase, decrease } = useCartService();
   const [existItem, setExistItem] = useState<OrderItem | undefined>();
 
   useEffect(() => {
-    setExistItem(items.find((x) => x.slug === item.slug))
-  }, [item, items])
+    setExistItem(items.find((x) => x.slug === item.slug));
+  }, [item, items]);
 
   const addToCartHandler = () => {
-    increase(item)
-  }
+    increase(item);
+  };
 
   return existItem ? (
     <div>
-      <button className="btn" type="button">
+      <button className="btn" type="button" onClick={() => decrease(existItem)}>
         -
       </button>
       <span className="px-2">{existItem.qty}</span>
@@ -35,5 +35,5 @@ export default function AddToCart({ item }: { item: OrderItem }) {
     >
       Add to cart
     </button>
-  )
+  );
 }
