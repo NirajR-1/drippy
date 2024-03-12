@@ -26,7 +26,9 @@ export default async function ProductDetails({
   params: { slug: string };
 }) {
   const product = await productService.getBySlug(params.slug);
+  console.log("Product:", product);
   if (!product) {
+    console.log("Product not found.");
     return (
       <>
         <div className="my-2">
