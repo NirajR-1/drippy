@@ -1,24 +1,66 @@
-"use client";
-import { OrderItem } from "@/lib/models/OrderModel";
-import { useSession } from "next-auth/react";
-import Image from "next/image";
-import Link from "next/link";
-import toast from "react-hot-toast";
-import useSWR from "swr";
-import useSWRMutation from "swr/mutation";
+'use client'
+import { OrderItem } from '@/lib/models/OrderModel'
+import { useSession } from 'next-auth/react'
+import Image from 'next/image'
+import Link from 'next/link'
+import toast from 'react-hot-toast'
+import useSWR from 'swr'
+import useSWRMutation from 'swr/mutation'
 
 export default function OrderDetails({
   orderId,
   paypalClientId,
 }: {
-  orderId: string;
-  paypalClientId: string;
+  orderId: string
+  paypalClientId: string
 }) {
-  const { data: session } = useSession();
-  const { data, error } = useSWR(`/api/orders/${orderId}`);
+  const { trigger: deliverOrder, isMutating: isDelivering } = useSWRMutation(
+    `/api/orders/${orderId}`,
+    async (url) => {
+      const res = await fetch(`/api/admin/orders/${orderId}/deliver`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      const data = await res.json()
+      res.ok
+        ? toast.success('Order delivered successfully')
+        : toast.error(data.message)
+    }
+  )
 
-  if (error) return error.message;
-  if (!data) return "Loading...";
+  const { data: session } = useSession()
+  console.log(session)
+  function createPayPalOrder() {
+    return fetch(`/api/orders/${orderId}/create-paypal-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((response) => response.json())
+      .then((order) => order.id)
+  }
+
+  function onApprovePayPalOrder(data: any) {
+    return fetch(`/api/orders/${orderId}/capture-paypal-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((orderData) => {
+        toast.success('Order paid successfully')
+      })
+  }
+
+  const { data, error } = useSWR(`/api/orders/${orderId}`)
+
+  if (error) return error.message
+  if (!data) return 'Loading...'
 
   const {
     paymentMethod,
@@ -32,7 +74,7 @@ export default function OrderDetails({
     deliveredAt,
     isPaid,
     paidAt,
-  } = data;
+  } = data
 
   return (
     <div>
@@ -44,8 +86,8 @@ export default function OrderDetails({
               <h2 className="card-title">Shipping Address</h2>
               <p>{shippingAddress.fullName}</p>
               <p>
-                {shippingAddress.address}, {shippingAddress.city},{" "}
-                {shippingAddress.postalCode}, {shippingAddress.country}{" "}
+                {shippingAddress.address}, {shippingAddress.city},{' '}
+                {shippingAddress.postalCode}, {shippingAddress.country}{' '}
               </p>
               {isDelivered ? (
                 <div className="text-success">Delivered at {deliveredAt}</div>
@@ -98,7 +140,7 @@ export default function OrderDetails({
                         </Link>
                       </td>
                       <td>{item.qty}</td>
-                      <td>Rs {item.price}</td>
+                      <td>${item.price}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -115,32 +157,46 @@ export default function OrderDetails({
                 <li>
                   <div className="mb-2 flex justify-between">
                     <div>Items</div>
-                    <div>Rs {itemsPrice}</div>
+                    <div>${itemsPrice}</div>
                   </div>
                 </li>
                 <li>
                   <div className="mb-2 flex justify-between">
                     <div>Tax</div>
-                    <div>Rs {taxPrice}</div>
+                    <div>${taxPrice}</div>
                   </div>
                 </li>
                 <li>
                   <div className="mb-2 flex justify-between">
                     <div>Shipping</div>
-                    <div>Rs {shippingPrice}</div>
+                    <div>${shippingPrice}</div>
                   </div>
                 </li>
                 <li>
                   <div className="mb-2 flex justify-between">
                     <div>Total</div>
-                    <div>Rs {totalPrice}</div>
+                    <div>${totalPrice}</div>
                   </div>
                 </li>
+                {session?.user.isAdmin && (
+                  <li>
+                    <button
+                      className="btn w-full my-2"
+                      onClick={() => deliverOrder()}
+                      disabled={isDelivering}
+                    >
+                      {isDelivering && (
+                        <span className="loading loading-spinner"></span>
+                      )}
+                      Mark as delivered
+                    </button>
+                  </li>
+                )}
               </ul>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
